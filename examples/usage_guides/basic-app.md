@@ -40,15 +40,18 @@ project(MyFirstApp VERSION 1.0.0)
 
 # 1. Подключаем CDU
 # Предполагается, что CDU находится в папке cmake/cdu
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/cdu")
-include(cdu)
+include(cmake/cdu/cdu.cmake)
+
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core)
+
+# Нашли исходники относительно расположения этого файла
+file(GLOB_RECURSE ${PROJECT_NAME}_SOURCES "src/*.cpp" "include/*.h")
 
 # 2. Объявляем наше приложение
-# CDU автоматически найдет исходники в папке src/
-# (стандартное поведение, можно переопределить через SOURCES)
 declare_application(${PROJECT_NAME}
-    SOURCES
-        src/main.cpp
+    SOURCES ${${PROJECT_NAME}_SOURCES}
+    PRIVATE Qt${QT_VERSION_MAJOR}::Core
 )
 ```
 

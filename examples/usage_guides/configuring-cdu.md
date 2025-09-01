@@ -50,4 +50,160 @@ set(CDU_DEBUG_MODE ON CACHE BOOL "...")
 - **`CDU_DEPLOY_EXTRA_POST_EXCLUDE_REGEXES`**: Позволяет добавить свои правила для исключения ненужных библиотек из деплоя.
 - **`CDU_DEPLOY_INCLUDE_TOOLCHAIN_BIN`**: Установите в `ON`, если ваши зависимости (например, `libgcc_s_seh-1.dll` для MinGW) находятся рядом с компилятором.
 
+### 4. Настройка пресетом (CMakePresets)
+
+- **`CMakePresets.json`**: Позволяет указать параметры конфигурации сборки только один раз, и потом переиспользовать сколько угодно. 
+  ```jsonc
+  {
+      "version": 3,
+      "cmakeMinimumRequired": {
+          "major": 3,
+          "minor": 21,
+          "patch": 0
+      },
+      "configurePresets": [
+          {
+              "name": "windows-debug",
+              "hidden": false,
+              "generator": "MinGW Makefiles",
+              "description": "Windows Debug build with Qt 6.8.2",
+              "binaryDir": "${sourceDir}/.build/windows-debug",
+              "cacheVariables": {
+                  "CMAKE_BUILD_TYPE": "Debug",
+                  "BUILD_TESTS": "ON",
+                  "CDU_LOG_LEVEL": "INFO", // Параметр уровня лога деплоя
+                  "CDU_DEPLOY_INCLUDE_TOOLCHAIN_BIN": "OFF", // Параметр включения деплоя утилит тулчейна (опционально)
+                  "CDU_PCH_FILE": "${sourceDir}/templates/pch.h", // Параметр установки PCH файла (опционально)
+                  "CDU_RC_TEMPLATE": "${sourceDir}/templates/version.rc.in", // Параметр установки шаблона файла ресурсов (опционально)
+                  "CDU_PCH_UNSPECIFIED_DEFAULT_STATE": "ON", // Параметр стандартного поведения включения PCH (если не задано целью)
+                  "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake", // Параметр интеграции с vcpk (опционально)
+                  "VCPKG_TARGET_TRIPLET": "x64-mingw-static", // Параметр интеграции с vcpk (опционально)
+                  "CMAKE_INSTALL_PREFIX": "${sourceDir}/.install/windows-debug", // Параметр директории деплоя (установки)
+                  "CMAKE_PREFIX_PATH": "C:/Qt/6.8.2/mingw_64/lib/cmake", // Параметр тулчейна Qt (опционально)
+                  "CMAKE_C_COMPILER": "C:/Qt/Tools/mingw1310_64/bin/gcc.exe", // Параметр компилятора C (опционально)
+                  "CMAKE_CXX_COMPILER": "C:/Qt/Tools/mingw1310_64/bin/g++.exe", // Параметр компилятора C++ (опционально)
+                  "CMAKE_MAKE_PROGRAM": "C:/Qt/Tools/mingw1310_64/bin/mingw32-make.exe", // Параметр компоновщика make (опционально)
+                  "CMAKE_CXX_STANDARD": "20" // Параметр стандарта языка C++ (опционально)
+              },
+              "condition": {
+                  "type": "equals",
+                  "lhs": "${hostSystemName}",
+                  "rhs": "Windows"
+              }
+          },
+          {
+              "name": "windows-release",
+              "hidden": false,
+              "generator": "MinGW Makefiles",
+              "description": "Windows Release build with Qt 6.8.2",
+              "binaryDir": "${sourceDir}/.build/windows-release",
+              "cacheVariables": {
+                  "CMAKE_BUILD_TYPE": "Release",
+                  "BUILD_TESTS": "OFF",
+                  "CDU_LOG_LEVEL": "INFO",
+                  "CDU_DEPLOY_INCLUDE_TOOLCHAIN_BIN": "OFF",
+                  "CDU_PCH_FILE": "${sourceDir}/templates/pch.h",
+                  "CDU_RC_TEMPLATE": "${sourceDir}/templates/version.rc.in",
+                  "CDU_PCH_UNSPECIFIED_DEFAULT_STATE": "ON",
+                  "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+                  "VCPKG_TARGET_TRIPLET": "x64-mingw-static",
+                  "CMAKE_INSTALL_PREFIX": "${sourceDir}/.install/windows-release",
+                  "CMAKE_PREFIX_PATH": "C:/Qt/6.8.2/mingw_64/lib/cmake",
+                  "CMAKE_C_COMPILER": "C:/Qt/Tools/mingw1310_64/bin/gcc.exe",
+                  "CMAKE_CXX_COMPILER": "C:/Qt/Tools/mingw1310_64/bin/g++.exe",
+                  "CMAKE_MAKE_PROGRAM": "C:/Qt/Tools/mingw1310_64/bin/mingw32-make.exe",
+                  "CMAKE_CXX_STANDARD": "20"
+              },
+              "condition": {
+                  "type": "equals",
+                  "lhs": "${hostSystemName}",
+                  "rhs": "Windows"
+              }
+          },
+          {
+              "name": "linux-debug",
+              "hidden": false,
+              "generator": "Unix Makefiles",
+              "description": "Linux Debug build with Qt 6.8.2",
+              "binaryDir": "${sourceDir}/.build/linux-debug",
+              "cacheVariables": {
+                  "CMAKE_BUILD_TYPE": "Debug",
+                  "BUILD_TESTS": "ON",
+                  "CMAKE_INSTALL_PREFIX": "${sourceDir}/.install/linux-debug",
+                  "CMAKE_CXX_STANDARD": "20"
+              },
+              "condition": {
+                  "type": "equals",
+                  "lhs": "${hostSystemName}",
+                  "rhs": "Linux"
+              }
+          },
+          {
+              "name": "linux-release",
+              "hidden": false,
+              "generator": "Unix Makefiles",
+              "description": "Linux Release build with Qt 6.8.2",
+              "binaryDir": "${sourceDir}/.build/linux-release",
+              "cacheVariables": {
+                  "CMAKE_BUILD_TYPE": "Release",
+                  "BUILD_TESTS": "OFF",
+                  "CMAKE_INSTALL_PREFIX": "${sourceDir}/.install/linux-release",
+                  "CMAKE_CXX_STANDARD": "20"
+              },
+              "condition": {
+                  "type": "equals",
+                  "lhs": "${hostSystemName}",
+                  "rhs": "Linux"
+              }
+          }
+      ],
+      "buildPresets": [
+          {
+              "name": "windows-debug",
+              "configurePreset": "windows-debug",
+              "description": "Build Windows Debug configuration",
+              "cleanFirst": false,
+              "targets": [
+                  "all",
+                  "install"
+              ],
+              "jobs": 6
+          },
+          {
+              "name": "windows-release",
+              "configurePreset": "windows-release",
+              "description": "Build Windows Release configuration",
+              "cleanFirst": true,
+              "targets": [
+                  "all",
+                  "install"
+              ],
+              "jobs": 6
+          },
+          {
+              "name": "linux-debug",
+              "configurePreset": "linux-debug",
+              "description": "Build Linux Debug configuration",
+              "cleanFirst": false,
+              "targets": [
+                  "all",
+                  "install"
+              ],
+              "jobs": 6
+          },
+          {
+              "name": "linux-release",
+              "configurePreset": "linux-release",
+              "description": "Build Linux Release configuration",
+              "cleanFirst": true,
+              "targets": [
+                  "all",
+                  "install"
+              ],
+              "jobs": 6
+          }
+      ]
+  }
+  ```
+
 Эти настройки позволяют тонко адаптировать CDU под нужды практически любого проекта.

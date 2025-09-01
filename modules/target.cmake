@@ -17,6 +17,26 @@ set(CDU_TARGET_MODULE_LOADED TRUE)
 # ========================================================================================
 
 ##
+# @brief (Внутренняя) Возвращает реальное имя таргета, разрешая алиасы.
+#
+# Если переданное имя - это алиас, функция вернет имя цели, на которую
+# он указывает. Если это уже реальный таргет, вернет его же.
+#
+# @param out_var Переменная для сохранения результата.
+# @param in_name Имя (возможно, алиас) для проверки.
+#
+function(_CDU_get_real_target_name out_var in_name)
+    set(real_name ${in_name})
+    if(TARGET ${in_name})
+        get_target_property(aliased_target ${in_name} ALIASED_TARGET)
+        if(aliased_target)
+            set(real_name ${aliased_target})
+        endif()
+    endif()
+    set(${out_var} ${real_name} PARENT_SCOPE)
+endfunction()
+
+##
 # @brief (Внутренняя) Внедряет информацию о версии Windows в бинарный файл.
 #
 # Добавляет статический .rc файл к исходникам таргета и передает в него
@@ -60,29 +80,31 @@ function(_CDU_configure_windows_version_info target_name)
         set(description "N/A")
     endif()
 
-        # Определение типа файла и имени для .rc
-        if(target_type STREQUAL "EXECUTABLE")
-            set(rc_file_type "VFT_APP")
-            set(original_filename "${target_name}.exe")
-        else()
-            set(rc_file_type "VFT_DLL")
-            set(original_filename "${target_name}.dll")
-        endif()
+    # Определение типа файла и имени для .rc
+    if(target_type STREQUAL "EXECUTABLE")
+        set(rc_file_type "VFT_APP")
+        set(original_filename "${target_name}.exe")
+    else()
+        set(rc_file_type "VFT_DLL")
+        set(original_filename "${target_name}.dll")
+    endif()
 
-        # Добавляем RC-файл к исходникам
-        target_sources(${target_name} PRIVATE "${CDU_RC_TEMPLATE}")
+    # Добавляем RC-файл к исходникам
+    set(cdu_res_${target_name} "${CMAKE_CURRENT_BINARY_DIR}/cdu_res_${target_name}.rc")
+    configure_file(${CDU_RC_TEMPLATE} ${cdu_res_${target_name}} @ONLY)
+    target_sources(${target_name} PRIVATE "${cdu_res_${target_name}}")
 
-        # Передаем данные в RC-файл через макросы
-        target_compile_definitions(${target_name} PRIVATE
-            CDU_VERSION_MAJOR=${version_major}
-            CDU_VERSION_MINOR=${version_minor}
-            CDU_VERSION_PATCH=${version_patch}
-            CDU_VERSION_BUILD=${version_build}
-            CDU_FILE_DESCRIPTION_STR="${description}"
-            CDU_INTERNAL_NAME_STR="${target_name}"
-            CDU_ORIGINAL_FILENAME_STR="${original_filename}"
-            CDU_RC_FILE_TYPE ${rc_file_type}
-        )
+    # Передаем данные в RC-файл через макросы
+    target_compile_definitions(${target_name} PRIVATE
+        CDU_VERSION_MAJOR=${version_major}
+        CDU_VERSION_MINOR=${version_minor}
+        CDU_VERSION_PATCH=${version_patch}
+        CDU_VERSION_BUILD=${version_build}
+        CDU_FILE_DESCRIPTION_STR="${description}"
+        CDU_INTERNAL_NAME_STR="${target_name}"
+        CDU_ORIGINAL_FILENAME_STR="${original_filename}"
+        CDU_RC_FILE_TYPE ${rc_file_type}
+    )
 
     CDU_debug("Windows metadata configured for target '${target_name}' via compile definitions.")
 endfunction()

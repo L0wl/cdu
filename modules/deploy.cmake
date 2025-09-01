@@ -181,14 +181,10 @@ function(_CDU_declare_deploy name)
     if(app_plugins)
         CDU_debug("Starting deploying plugins for '${name}': ${app_plugins}")
         foreach(plugin_name IN LISTS app_plugins)
-            set(real_plugin_name ${plugin_name})
-            if(TARGET ${plugin_name})
-                get_target_property(aliased_target ${plugin_name} ALIASED_TARGET)
-                if(aliased_target)
-                    set(real_plugin_name ${aliased_target})
-                endif()
-            else()
-                CDU_warning("Plugin '${plugin_name}' not found. Skipping...")
+            _CDU_get_real_target_name(real_plugin_name ${plugin_name})
+
+            if(NOT TARGET ${real_plugin_name})
+                CDU_warning("Plugin target '${plugin_name}' not found. Skipping...")
                 continue()
             endif()
 
@@ -209,6 +205,47 @@ function(_CDU_declare_deploy name)
 
             # Для сканирования зависимостей нам нужен путь файла плагина
             list(APPEND _plugin_files "$<TARGET_FILE:${real_plugin_name}>")
+        endforeach()
+    endif()
+
+    # Устанавливаем пакеты с данными (если есть)
+    set(app_packages "")
+    get_target_property(app_packages ${name} TARGET_PACKAGES)
+    if(app_packages)
+        CDU_debug("Starting deploying packages for '${name}': ${app_packages}")
+        foreach(package_name IN LISTS app_packages)
+            _CDU_get_real_target_name(real_package_name ${package_name})
+
+            if(NOT TARGET ${real_package_name})
+                CDU_warning("Package target '${package_name}' not found. Skipping...")
+                continue()
+            endif()
+
+            get_target_property(is_package ${real_package_name} IS_PACKAGE)
+            if(NOT is_package)
+                CDU_warning("Target '${package_name}' not marked as package (IS_PACKAGE). Skipping")
+                continue()
+            endif()
+
+            get_target_property(package_files ${real_package_name} PACKAGE_FILES)
+            get_target_property(package_dest ${real_package_name} PACKAGE_DESTINATION)
+            get_target_property(package_dir ${real_package_name} SOURCE_DIR)
+
+            if (package_files AND EXISTS "${package_dir}")
+                set(pak_install_files)
+
+                foreach(package_file IN LISTS package_files)
+                    file(RELATIVE_PATH file_relative "${package_dir}" "${package_file}")
+                    get_filename_component(file_relative_dir "${file_relative}" DIRECTORY)
+
+                    install(FILES ${package_file}
+                        DESTINATION "${install_destination}/${package_dest}/${file_relative_dir}"
+                        COMPONENT ${name}
+                    )
+
+                endforeach()
+                CDU_debug("Configured installation for package '${package_name}' to '${install_destination}/${package_dest}'")
+            endif()
         endforeach()
     endif()
 

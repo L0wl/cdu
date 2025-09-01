@@ -26,20 +26,36 @@ my_project/
 
 **`plugins/format_a/CMakeLists.txt`**
 ```cmake
+project(plugin_a VERSION 1.0.0)
 # Объявляем плагин с именем 'plugin_a' и категорией 'formats'
 # Категория определяет, в какую подпапку он будет установлен
-declare_plugin(plugin_a "formats"
-    SOURCES
-        src/plugin_a.cpp
+
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Xml)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Xml)
+
+file(GLOB_RECURSE ${PROJECT_NAME}_SOURCES "src/*.cpp" "include/*.h")
+
+declare_plugin(${PROJECT_NAME} "formats"
+    SOURCES ${${PROJECT_NAME}_SOURCES}
+    ALIAS Formats::PluginA
+    PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Xml
 )
 ```
 
 **`plugins/format_b/CMakeLists.txt`**
 ```cmake
+project(plugin_b VERSION 1.0.0)
+
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Xml)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Xml)
+
+file(GLOB_RECURSE ${PROJECT_NAME}_SOURCES "src/*.cpp" "include/*.h")
+
 # Объявляем плагин с именем 'plugin_b' и той же категорией 'formats'
-declare_plugin(plugin_b "formats"
-    SOURCES
-        src/plugin_b.cpp
+declare_plugin(${PROJECT_NAME} "formats"
+    SOURCES ${${PROJECT_NAME}_SOURCES}
+    ALIAS Formats::PluginB
+    PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Xml
 )
 ```
 
@@ -51,13 +67,19 @@ include_projects()
 
 **`apps/my_app/CMakeLists.txt`**
 ```cmake
+project(my_app VERSION 1.0.0)
+
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core)
+file(GLOB_RECURSE ${PROJECT_NAME}_SOURCES "src/*.cpp" "include/*.h")
+
 # Объявляем приложение и указываем, какие плагины ему нужны
-declare_application(my_app
-    SOURCES
-        src/main.cpp
+declare_application(${PROJECT_NAME}
+    SOURCES ${${PROJECT_NAME}_SOURCES}
     PLUGINS # Ключевое слово для указания плагинов
-        plugin_a
-        plugin_b
+        Formats::PluginA # Можно так-же указать plugin_a
+        Formats::PluginB # Можно так-же указать plugin_b
+    PRIVATE Qt${QT_VERSION_MAJOR}::Core
 )
 ```
 
@@ -67,8 +89,7 @@ cmake_minimum_required(VERSION 3.21)
 project(AppWithPlugins)
 
 # 1. Подключаем CDU
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/cdu")
-include(cdu)
+include(cmake/cdu/cdu.cmake)
 
 # 2. Включаем директории
 add_subdirectory(plugins)
@@ -92,6 +113,7 @@ install/
     └── my_app/
         ├── my_app.exe          # Исполняемый файл
         ├── Qt6Core.dll         # Зависимости приложения
+        ├── Qt6Xml.dll          # Зависимости плагина будут здесь
         └── plugins/            # Директория с плагинами
             └── formats/
                 ├── plugin_a.dll

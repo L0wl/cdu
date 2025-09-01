@@ -58,24 +58,28 @@ int main() {
 
 **`libs/my_lib/CMakeLists.txt`**
 ```cmake
+project(my_lib VERSION 1.0.0)
+file(GLOB_RECURSE ${PROJECT_NAME}_SOURCES "src/*.cpp" "include/*.h")
+
 # Объявляем статическую библиотеку
-declare_library(my_lib STATIC
-    SOURCES
-        src/my_lib.cpp
-    PUBLIC
-        # Делаем директорию include/ доступной для других таргетов
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+declare_library(${PROJECT_NAME} STATIC
+    SOURCES ${${PROJECT_NAME}_SOURCES} # Включение всех исходников библиотеки (важно)
+    ALIAS MyLibrary::Lib
+    # Директория include/ доступна для других таргетов
+    # без $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )
 ```
 
 **`apps/my_app/CMakeLists.txt`**
 ```cmake
+project(my_app VERSION 1.0.0)
+
 # Объявляем приложение и линкуем его с библиотекой
-declare_application(my_app
-    SOURCES
-        src/main.cpp
-    PUBLIC
-        my_lib # Линкуемся с my_lib
+file(GLOB_RECURSE ${PROJECT_NAME}_SOURCES "src/*.cpp" "include/*.h")
+
+declare_application(${PROJECT_NAME}
+    SOURCES ${${PROJECT_NAME}_SOURCES}
+    PUBLIC MyLibrary::Lib # Линкуемся с my_lib. (Вместо 'MyLibrary::Lib', можно так-же указать имя цели: 'my_lib')
 )
 ```
 
@@ -92,8 +96,7 @@ cmake_minimum_required(VERSION 3.21)
 project(AppWithLibrary)
 
 # 1. Подключаем CDU
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/cdu")
-include(cdu)
+include(cmake/cdu/cdu.cmake)
 
 # 2. Включаем директории с библиотеками и приложениями
 add_subdirectory(libs)
