@@ -275,10 +275,10 @@ function(_CDU_declare_deploy name)
     install(CODE "
             message(STATUS \"[CDU][DEPLOY] Scanning runtime deps for: ${name}\")
 
-            set(_execs ${_execs_list})
-            set(_dirs ${_dirs_list})
-            set(_pre ${_pre_list})
-            set(_post ${_post_list})
+            set(_execs \"${_execs_list}\")
+            set(_dirs \"${_dirs_list}\")
+            set(_pre \"${_pre_list}\")
+            set(_post \"${_post_list}\")
             set(_dst \"${_dst}\")
 
             message(STATUS \"[CDU][DEPLOY] EXECUTABLES=\${_execs}\")
@@ -295,11 +295,11 @@ function(_CDU_declare_deploy name)
             )
 
             if(bad)
-              message(WARNING \"[CDU][DEPLOY] Unresolved deps:\\n\${bad}\")
+                message(WARNING \"[CDU][DEPLOY] Unresolved deps:\\n\${bad}\")
             endif()
 
             foreach(f IN LISTS deps)
-              file(COPY \"\${f}\" DESTINATION \"\${_dst}\")
+                file(COPY \"\${f}\" DESTINATION \"\${_dst}\")
             endforeach()
 
             message(STATUS \"[CDU][DEPLOY] Copied deps: \${deps}\")

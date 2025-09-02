@@ -188,7 +188,7 @@ endfunction()
 function(declare_library name type)
     cmake_parse_arguments(ARG "" "ALIAS;PCH" "SOURCES;INCLUDE_DIRS;COMPILE_FEATURES;COMPILE_DEFINITIONS;PRIVATE;PUBLIC;PCH_FILES" ${ARGN})
 
-    if(NOT (type STREQUAL "SHARED" OR type STREQUAL "STATIC" OR type STREQUAL "INTERFACE"))
+    if(NOT (type STREQUAL "SHARED" OR type STREQUAL "STATIC" OR type STREQUAL "MODULE" OR type STREQUAL "INTERFACE"))
         CDU_error("declare_library(${name}): unknown type '${type}'. Use SHARED, STATIC or INTERFACE.")
     endif()
 
@@ -229,14 +229,22 @@ endfunction()
 #     PUBLIC my_lib
 # )
 function(declare_plugin name category)
-    cmake_parse_arguments(ARG "" "ALIAS;PCH" "SOURCES;PUBLIC;PRIVATE;COMPILE_DEFINITIONS;PCH_FILES" ${ARGN})
+    cmake_parse_arguments(ARG "" "ALIAS;PCH;TYPE" "SOURCES;PUBLIC;PRIVATE;COMPILE_DEFINITIONS;PCH_FILES" ${ARGN})
 
     if(NOT name OR NOT category)
         CDU_error("Usage: declare_plugin(<name> <category> ...)")
     endif()
 
-    # Плагин - это всегда разделяемая библиотека
-    declare_library(${name} SHARED
+    if(NOT ARG_TYPE)
+        set(ARG_TYPE "SHARED")
+    endif()
+
+    if(NOT (ARG_TYPE STREQUAL "SHARED" OR ARG_TYPE STREQUAL "MODULE"))
+        CDU_error("declare_plugin(${name}): Invalid TYPE '${ARG_TYPE}'. Use SHARED or MODULE.")
+    endif()
+
+    # Плагин - это всегда разделяемая библиотека (SHARED / MODULE)
+    declare_library(${name} ${ARG_TYPE}
         ALIAS ${ARG_ALIAS}
         PCH ${ARG_PCH}
         PCH_FILES ${ARG_PCH_FILES}
@@ -246,18 +254,17 @@ function(declare_plugin name category)
         COMPILE_DEFINITIONS ${ARG_COMPILE_DEFINITIONS}
     )
 
-# Устанавливаем свойства, специфичные для плагина
-if(TARGET ${name})
-    set_target_properties(${name} PROPERTIES
-        PREFIX "" # Убираем префикс 'lib'
-        IS_PLUGIN TRUE # Маркер, что это плагин
-        PLUGIN_CATEGORY "${category}" # Категория для сортировки
-        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/plugins/${category}"
-        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/plugins/${category}"
-    )
-endif()
-
-CDU_info("Definition of plugin: ${name} (category: ${category})")
+    # Устанавливаем свойства, специфичные для плагина
+    if(TARGET ${name})
+        set_target_properties(${name} PROPERTIES
+            PREFIX "" # Убираем префикс 'lib'
+            IS_PLUGIN TRUE # Маркер, что это плагин
+            PLUGIN_CATEGORY "${category}" # Категория для сортировки
+            LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/plugins/${category}"
+            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/plugins/${category}"
+        )
+    endif()
+    CDU_info("Definition of plugin: ${name} (category: ${category})")
 endfunction()
 
 CDU_debug("Module 'CDU_api' is loaded.")
