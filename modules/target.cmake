@@ -156,7 +156,12 @@ function(_CDU_declare_target name)
 
     # --- Общие свойства для всех "сборных" таргетов ---
     if(NOT ARG_TYPE STREQUAL "INTERFACE_LIBRARY")
-        set_target_properties(${name} PROPERTIES OUTPUT_NAME "${name}")
+        set_target_properties(${name} PROPERTIES
+            OUTPUT_NAME "${name}"
+            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+            LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+            ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+        )
 
         if(NOT ARG_PCH)
             set(ARG_PCH ${CDU_PCH_UNSPECIFIED_DEFAULT_STATE})
@@ -203,6 +208,23 @@ function(_CDU_declare_target name)
         endif()
     endif()
 
+    # --- Свойства базового RPATH для бинарников и библиотек ---
+    if(UNIX AND NOT APPLE AND (ARG_TYPE STREQUAL "EXECUTABLE" OR ARG_TYPE STREQUAL "SHARED_LIBRARY" OR ARG_TYPE STREQUAL "MODULE_LIBRARY"))
+        set_target_properties(${name} PROPERTIES
+            BUILD_RPATH "\$ORIGIN"
+            INSTALL_RPATH "\$ORIGIN"
+            INSTALL_RPATH_USE_LINK_PATH TRUE
+            BUILD_WITH_INSTALL_RPATH TRUE
+        )
+    elseif(APPLE AND (ARG_TYPE STREQUAL "EXECUTABLE" OR ARG_TYPE STREQUAL "SHARED_LIBRARY" OR ARG_TYPE STREQUAL "MODULE_LIBRARY"))
+        set_target_properties(${name} PROPERTIES
+            BUILD_RPATH "@loader_path"
+            INSTALL_RPATH "@loader_path"
+            INSTALL_RPATH_USE_LINK_PATH TRUE
+            BUILD_WITH_INSTALL_RPATH TRUE
+        )
+    endif()
+
     # --- Свойства для INTERFACE библиотек ---
     if(ARG_TYPE STREQUAL "INTERFACE_LIBRARY")
         if(ARG_INCLUDE_DIRS OR EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/include")
@@ -238,7 +260,6 @@ function(_CDU_declare_target name)
     # Регистрация таргета в глобальном списке для последующей обработки (например, деплоя)
     list(APPEND CDU_DECLARED_TARGETS ${name})
     set(CDU_DECLARED_TARGETS ${CDU_DECLARED_TARGETS} CACHE INTERNAL "Список всех таргетов, объявленных через CDU")
-
     CDU_debug("Internal target '${name}' with type '${ARG_TYPE}' successfuly created.")
 endfunction()
 

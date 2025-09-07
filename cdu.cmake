@@ -15,8 +15,12 @@ set(CDU_LOADED TRUE)
 
 # Определяем базовую директорию, где лежит этот файл
 get_filename_component(CDU_BASE_DIR "${CMAKE_CURRENT_LIST_FILE}" DIRECTORY)
+
 # Определяем директорию с модулями (cdu/modules)
 set(CDU_MODULES_DIR "${CDU_BASE_DIR}/modules")
+
+# Определяем директорию со скриптами
+set(CDU_SCRIPTS_DIR "${CDU_BASE_DIR}/scripts")
 
 # ========================================================================================
 # ========================================================================================
@@ -65,6 +69,11 @@ endif()
 # @example При ON - стандартный заголовок будет включён в цель, если стандартный заголовок доступен
 option(CDU_PCH_UNSPECIFIED_DEFAULT_STATE "Статус включения заголовка (Если не указано для цели)" ON)
 
+# @brief Копирование файлов библиотек вместо копирования ссылок на файлы библиотек
+# @example При OFF - библиотеки не будут скопированы, и будут созданы символьные ссылки указывающие на библиотеки из RPATH
+# @example При ON - библиотеки будут скопированы по месту расположения исполняемого файла.
+option(CDU_DEPLOY_DEREF_SYMLINKS "Копировать целевые файлы по симлинкам, сохраняя имя ссылки" ON)
+
 # @brief Путь к шаблону ресурсного файла (.rc) для Windows.
 # @note Оставьте пустым, чтобы отключить авто-генерацию версии.
 if(NOT CDU_RC_TEMPLATE)
@@ -85,7 +94,9 @@ set(CDU_DECLARED_TARGETS "" CACHE INTERNAL "Список всех задекла
 # Сначала подключаем базовые утилиты (логирование, валидация и т.д.)
 include("${CDU_MODULES_DIR}/utils.cmake")
 
-CDU_info("CDU build system is loading. Path to modules: ${CDU_MODULES_DIR}")
+CDU_info("CDU build system is loading.")
+CDU_info("Path to modules: ${CDU_MODULES_DIR}")
+CDU_info("Path to scripts: ${CDU_SCRIPTS_DIR}")
 
 # --- Логирование текущих настроек ---
 CDU_info("--- CDU Configuration ---")
@@ -96,6 +107,7 @@ CDU_info("RC template:\t\t\t${CDU_RC_TEMPLATE}")
 CDU_info("Deploy Additional dirs:\t\t${CDU_DEPLOY_ADDITIONAL_DIRS}")
 CDU_info("Deploy extra exclude regexes:\t${CDU_DEPLOY_EXTRA_POST_EXCLUDE_REGEXES}")
 CDU_info("Deploy include toolchain bin:\t${CDU_DEPLOY_INCLUDE_TOOLCHAIN_BIN}")
+CDU_info("Deploy deref symlinks:\t\t${CDU_DEPLOY_DEREF_SYMLINKS}")
 CDU_info("-------------------------")
 
 # Проверка минимальной версии CMake
