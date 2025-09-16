@@ -275,4 +275,27 @@ function(_CDU_declare_deploy name)
     CDU_debug("Deploy-script for '${name}' is configured (wrapper: ${_wrapper}).")
 endfunction()
 
+function(_CDU_deploy_qt_app name)
+    if(QT_DEFAULT_MAJOR_VERSION EQUAL 6)
+        get_target_property(${name}_install_dir ${name} INSTALL_DIR)
+        if(${name}_install_dir)
+            qt_generate_deploy_script(TARGET ${name}
+                OUTPUT_SCRIPT deploy_${name}_script
+                CONTENT "
+                    qt_deploy_runtime_dependencies(EXECUTABLE $<TARGET_FILE:${name}>
+                        BIN_DIR ${${name}_install_dir}
+                        LIB_DIR ${${name}_install_dir}
+                        QML_DIR ${${name}_install_dir}
+                        LIBEXEC_DIR ${${name}_install_dir}
+                        PLUGINS_DIR ${${name}_install_dir}/plugins
+                        NO_TRANSLATIONS
+                    )
+                "
+            )
+
+            install(SCRIPT ${deploy_${name}_script})
+        endif()
+    endif()
+endfunction()
+
 CDU_debug("Module 'CDU_deploy' (runtime deps via external script) loaded.")

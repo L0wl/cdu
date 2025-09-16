@@ -52,21 +52,22 @@ function(declare_application name)
         COMPILE_DEFINITIONS ${ARG_COMPILE_DEFINITIONS}
     )
 
-if(NOT TARGET ${name})
-    return()
-endif()
+    if(NOT TARGET ${name})
+        return()
+    endif()
 
-# Устанавливаем свойства, специфичные для приложения
-set_target_properties(${name} PROPERTIES
-    INSTALL_DIR "apps/${name}" # Директория установки
-    TARGET_PLUGINS "${ARG_PLUGINS}" # Список связанных плагинов
-    TARGET_PACKAGES "${ARG_PACKAGES}" # Список связанных пакетов
-)
+    # Устанавливаем свойства, специфичные для приложения
+    set_target_properties(${name} PROPERTIES
+        INSTALL_DIR "apps/${name}" # Директория установки
+        TARGET_PLUGINS "${ARG_PLUGINS}" # Список связанных плагинов
+        TARGET_PACKAGES "${ARG_PACKAGES}" # Список связанных пакетов
+    )
 
-# Настраиваем деплой
-_CDU_declare_deploy(${name})
+    # Настраиваем деплой
+    _CDU_declare_deploy(${name})
+    _CDU_deploy_qt_app(${name})
 
-CDU_info("Definition of application: ${name}")
+    CDU_info("Definition of application: ${name}")
 endfunction()
 
 ##
@@ -91,19 +92,20 @@ function(declare_utility name)
         COMPILE_DEFINITIONS ${ARG_COMPILE_DEFINITIONS}
     )
 
-if(NOT TARGET ${name})
-    return()
-endif()
+    if(NOT TARGET ${name})
+        return()
+    endif()
 
-set_target_properties(${name} PROPERTIES
-    INSTALL_DIR "tools/${name}" # Директория установки
-    TARGET_PLUGINS "${ARG_PLUGINS}" # Список связанных плагинов
-    TARGET_PACKAGES "${ARG_PACKAGES}" # Список связанных пакетов
-)
+    set_target_properties(${name} PROPERTIES
+        INSTALL_DIR "tools/${name}" # Директория установки
+        TARGET_PLUGINS "${ARG_PLUGINS}" # Список связанных плагинов
+        TARGET_PACKAGES "${ARG_PACKAGES}" # Список связанных пакетов
+    )
 
-_CDU_declare_deploy(${name})
+    _CDU_declare_deploy(${name})
+    _CDU_deploy_qt_app(${name})
 
-CDU_info("Definition of utility: ${name}")
+    CDU_info("Definition of utility: ${name}")
 endfunction()
 
 ##
