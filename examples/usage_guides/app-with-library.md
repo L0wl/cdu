@@ -64,11 +64,14 @@ file(GLOB_RECURSE ${PROJECT_NAME}_SOURCES "src/*.cpp" "include/*.h")
 # Объявляем статическую библиотеку
 declare_library(${PROJECT_NAME} STATIC
     SOURCES ${${PROJECT_NAME}_SOURCES} # Включение всех исходников библиотеки (важно)
-    ALIAS MyLibrary::Lib
-    # Директория include/ доступна для других таргетов
-    # без $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )
 ```
+
+CDU автоматически создаст дополнительный таргет `AppWithLibrary::my_lib`,
+который можно использовать при линковке вместо локального имени `my_lib`.
+При установке проекта будет создан `find_package(AppWithLibrary CONFIG)` с
+экспортом тех же имён, поэтому сторонние проекты тоже могут подключить
+библиотеку через `AppWithLibrary::my_lib`.
 
 **`apps/my_app/CMakeLists.txt`**
 ```cmake
@@ -79,7 +82,7 @@ file(GLOB_RECURSE ${PROJECT_NAME}_SOURCES "src/*.cpp" "include/*.h")
 
 declare_application(${PROJECT_NAME}
     SOURCES ${${PROJECT_NAME}_SOURCES}
-    PUBLIC MyLibrary::Lib # Линкуемся с my_lib. (Вместо 'MyLibrary::Lib', можно так-же указать имя цели: 'my_lib')
+    PUBLIC AppWithLibrary::my_lib # Линкуемся с библиотекой через пространство имён проекта
 )
 ```
 

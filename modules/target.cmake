@@ -31,9 +31,199 @@ function(_CDU_get_real_target_name out_var in_name)
         get_target_property(aliased_target ${in_name} ALIASED_TARGET)
         if(aliased_target)
             set(real_name ${aliased_target})
+        else()
+            get_target_property(mapped_target ${in_name} CDU_REAL_TARGET)
+            if(mapped_target AND NOT mapped_target STREQUAL "NOTFOUND")
+                set(real_name ${mapped_target})
+            endif()
         endif()
     endif()
     set(${out_var} ${real_name} PARENT_SCOPE)
+endfunction()
+
+##
+# @brief (Внутренняя) Возвращает пространство имён для авто-создаваемых таргетов.
+#
+# Значение берётся из переменной CDU_TARGET_NAMESPACE. Пустая строка означает,
+# что генерация пространств имён отключена.
+#
+# @param out_var Переменная для сохранения результата.
+#
+function(_CDU_get_target_namespace out_var)
+    if(CDU_TARGET_NAMESPACE)
+        set(namespace "${CDU_TARGET_NAMESPACE}")
+    else()
+        set(namespace "")
+    endif()
+    set(${out_var} "${namespace}" PARENT_SCOPE)
+endfunction()
+
+##
+# @brief (Внутренняя) Регистрирует таргет в пространстве имён проекта.
+#
+# Создаёт глобальную INTERFACE-цель вида `<namespace>::<display_name>`,
+# которая транзитивно ссылается на реальный таргет. Это позволяет ссылаться
+# на библиотеки проекта через единое пространство имён без использования ALIAS.
+#
+# @param real_target Имя реального таргета.
+# @arg DISPLAY_NAME Имя, используемое в пространстве имён (по умолчанию совпадает с real_target).
+#
+function(_CDU_register_namespaced_target real_target)
+    cmake_parse_arguments(ARG "" "DISPLAY_NAME" "" ${ARGN})
+
+    if(NOT TARGET ${real_target})
+        return()
+    endif()
+
+    _CDU_get_target_namespace(namespace)
+    if(NOT namespace)
+        return()
+    endif()
+
+    if(NOT ARG_DISPLAY_NAME)
+        set(ARG_DISPLAY_NAME ${real_target})
+    endif()
+
+    get_target_property(target_type ${real_target} TYPE)
+    if(target_type STREQUAL "EXECUTABLE")
+        return()
+    endif()
+
+    set(namespaced_target "${namespace}::${ARG_DISPLAY_NAME}")
+
+    if(TARGET ${namespaced_target})
+        get_target_property(_mapped_target ${namespaced_target} CDU_REAL_TARGET)
+        if(_mapped_target AND NOT _mapped_target STREQUAL "${real_target}")
+            CDU_error("Namespace target '${namespaced_target}' is already mapped to '${_mapped_target}'.")
+        endif()
+    else()
+        add_library(${namespaced_target} INTERFACE IMPORTED GLOBAL)
+    endif()
+
+    set_target_properties(${namespaced_target} PROPERTIES
+        CDU_REAL_TARGET ${real_target}
+    )
+    set_property(TARGET ${namespaced_target} PROPERTY INTERFACE_LINK_LIBRARIES ${real_target})
+
+    set_target_properties(${real_target} PROPERTIES EXPORT_NAME "${ARG_DISPLAY_NAME}")
+
+    get_property(_registered GLOBAL PROPERTY CDU_NAMESPACED_TARGETS)
+    if(NOT _registered)
+        set(_registered "")
+    endif()
+
+    set(_pair "${ARG_DISPLAY_NAME}|${real_target}")
+    list(FIND _registered "${_pair}" _idx)
+    if(_idx EQUAL -1)
+        list(APPEND _registered "${_pair}")
+        set_property(GLOBAL PROPERTY CDU_NAMESPACED_TARGETS "${_registered}")
+    endif()
+
+    get_property(_deferred GLOBAL PROPERTY CDU_NAMESPACED_EXPORT_DEFERRED)
+    if(NOT _deferred)
+        set_property(GLOBAL PROPERTY CDU_NAMESPACED_EXPORT_DEFERRED TRUE)
+        cmake_language(DEFER CALL _CDU_finalize_namespace_exports)
+    endif()
+
+    CDU_debug("Registered namespace target '${namespaced_target}' for '${real_target}'.")
+endfunction()
+
+function(_CDU_finalize_namespace_exports)
+    _CDU_get_target_namespace(_namespace)
+    if(NOT _namespace)
+        return()
+    endif()
+
+    get_property(_pairs GLOBAL PROPERTY CDU_NAMESPACED_TARGETS)
+    if(NOT _pairs)
+        return()
+    endif()
+
+    include(GNUInstallDirs)
+    include(CMakePackageConfigHelpers)
+
+    set(_export_set "${_namespace}Targets")
+    set(_cdu_binary_dir "${CMAKE_BINARY_DIR}/cdu")
+    file(MAKE_DIRECTORY "${_cdu_binary_dir}")
+
+    set(_targets_to_export "")
+    foreach(_entry IN LISTS _pairs)
+        string(REPLACE "|" ";" _parts "${_entry}")
+        list(GET _parts 0 _display)
+        list(GET _parts 1 _target)
+        if(NOT TARGET "${_target}")
+            continue()
+        endif()
+        get_target_property(_type "${_target}" TYPE)
+        if(_type STREQUAL "EXECUTABLE")
+            continue()
+        endif()
+
+        list(APPEND _targets_to_export "${_target}")
+
+        if(_type STREQUAL "INTERFACE_LIBRARY")
+            install(TARGETS "${_target}" EXPORT "${_export_set}")
+        else()
+            install(TARGETS "${_target}"
+                EXPORT "${_export_set}"
+                ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+                LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+                RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+                INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+            )
+        endif()
+    endforeach()
+
+    list(REMOVE_DUPLICATES _targets_to_export)
+    if(NOT _targets_to_export)
+        return()
+    endif()
+
+    set(_export_build "${_cdu_binary_dir}/${_export_set}.cmake")
+    export(EXPORT "${_export_set}"
+        FILE "${_export_build}"
+        NAMESPACE "${_namespace}::"
+    )
+
+    set(_config_template "${CDU_MODULES_DIR}/templates/package-config.cmake.in")
+    if(NOT EXISTS "${_config_template}")
+        CDU_warning("Package config template not found: ${_config_template}")
+        return()
+    endif()
+
+    set(_config_build "${_cdu_binary_dir}/${_namespace}Config.cmake")
+    set(_version_build "${_cdu_binary_dir}/${_namespace}ConfigVersion.cmake")
+
+    set(_install_dir "${CMAKE_INSTALL_LIBDIR}/cmake/${_namespace}")
+
+    set(PACKAGE_TARGETS_FILE "${_export_set}.cmake")
+    configure_package_config_file("${_config_template}" "${_config_build}"
+        INSTALL_DESTINATION "${_install_dir}"
+    )
+
+    set(_package_version "0.0.0")
+    if(CMAKE_PROJECT_VERSION)
+        set(_package_version "${CMAKE_PROJECT_VERSION}")
+    elseif(PROJECT_VERSION)
+        set(_package_version "${PROJECT_VERSION}")
+    endif()
+
+    write_basic_package_version_file("${_version_build}"
+        VERSION "${_package_version}"
+        COMPATIBILITY SameMajorVersion
+    )
+
+    install(EXPORT "${_export_set}"
+        FILE "${_export_set}.cmake"
+        NAMESPACE "${_namespace}::"
+        DESTINATION "${_install_dir}"
+    )
+
+    install(FILES
+        "${_config_build}"
+        "${_version_build}"
+        DESTINATION "${_install_dir}"
+    )
 endfunction()
 
 ##
@@ -196,11 +386,12 @@ function(_CDU_declare_target name)
             "${CMAKE_CURRENT_SOURCE_DIR}/include"
         )
 
-        # Добавление публичных include-директорий
-        target_include_directories(${name} PUBLIC
-            "${CMAKE_CURRENT_SOURCE_DIR}/include"
-            ${ARG_INCLUDE_DIRS}
+        set(_cdu_public_includes ${ARG_INCLUDE_DIRS})
+        list(APPEND _cdu_public_includes
+            "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+            "$<INSTALL_INTERFACE:include>"
         )
+        target_include_directories(${name} PUBLIC ${_cdu_public_includes})
 
         # Конфигурация версии для Windows
         if(WIN32)
@@ -228,10 +419,12 @@ function(_CDU_declare_target name)
     # --- Свойства для INTERFACE библиотек ---
     if(ARG_TYPE STREQUAL "INTERFACE_LIBRARY")
         if(ARG_INCLUDE_DIRS OR EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/include")
-            target_include_directories(${name} INTERFACE
-                "${CMAKE_CURRENT_SOURCE_DIR}/include"
-                ${ARG_INCLUDE_DIRS}
+            set(_cdu_interface_includes ${ARG_INCLUDE_DIRS})
+            list(APPEND _cdu_interface_includes
+                "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+                "$<INSTALL_INTERFACE:include>"
             )
+            target_include_directories(${name} INTERFACE ${_cdu_interface_includes})
         endif()
     endif()
 
@@ -261,6 +454,8 @@ function(_CDU_declare_target name)
     list(APPEND CDU_DECLARED_TARGETS ${name})
     set(CDU_DECLARED_TARGETS ${CDU_DECLARED_TARGETS} CACHE INTERNAL "Список всех таргетов, объявленных через CDU")
     CDU_debug("Internal target '${name}' with type '${ARG_TYPE}' successfuly created.")
+
+    _CDU_register_namespaced_target(${name})
 endfunction()
 
 CDU_debug("Module 'CDU_target' is loaded.")

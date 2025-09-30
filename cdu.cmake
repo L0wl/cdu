@@ -69,6 +69,23 @@ endif()
 # @example При ON - стандартный заголовок будет включён в цель, если стандартный заголовок доступен
 option(CDU_PCH_UNSPECIFIED_DEFAULT_STATE "Статус включения заголовка (Если не указано для цели)" ON)
 
+# @brief Пространство имён для автоматически объявляемых таргетов.
+# @details Значение по умолчанию — имя верхнеуровневого проекта. Оставьте пустым,
+#          чтобы отключить генерацию таргетов вида <namespace>::<target>.
+if(NOT DEFINED CDU_TARGET_NAMESPACE)
+    if(CMAKE_PROJECT_NAME)
+        set(_CDU_DEFAULT_NAMESPACE "${CMAKE_PROJECT_NAME}")
+    else()
+        set(_CDU_DEFAULT_NAMESPACE "")
+    endif()
+    set(CDU_TARGET_NAMESPACE "${_CDU_DEFAULT_NAMESPACE}" CACHE STRING
+        "Префикс пространства имён для таргетов, объявленных CDU. Оставьте пустым, чтобы отключить.")
+else()
+    set(CDU_TARGET_NAMESPACE "${CDU_TARGET_NAMESPACE}" CACHE STRING
+        "Префикс пространства имён для таргетов, объявленных CDU. Оставьте пустым, чтобы отключить." FORCE)
+endif()
+unset(_CDU_DEFAULT_NAMESPACE)
+
 # @brief Копирование файлов библиотек вместо копирования ссылок на файлы библиотек
 # @example При OFF - библиотеки не будут скопированы, и будут созданы символьные ссылки указывающие на библиотеки из RPATH
 # @example При ON - библиотеки будут скопированы по месту расположения исполняемого файла.

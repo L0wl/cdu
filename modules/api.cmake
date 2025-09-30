@@ -142,6 +142,8 @@ function(declare_package name)
         add_library(${ARG_ALIAS} ALIAS ${name}_package)
     endif()
 
+    _CDU_register_namespaced_target(${name}_package DISPLAY_NAME ${name})
+
     # Преобразуем относительные пути файлов в абсолютные
     set(absolute_files "")
     foreach(file IN LISTS ARG_FILES)

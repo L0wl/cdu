@@ -49,6 +49,8 @@ You can easily change parameters such as:
 
 - `CDU_LOG_LEVEL`: The verbosity level for logs (`INFO`, `DEBUG`).
 - `CDU_PCH_FILE`: The path to the precompiled header file (leave empty to disable).
+- `CDU_TARGET_NAMESPACE`: Namespace prefix for automatically created targets (defaults to the root project name). CDU exposes
+  importable `MyProject::Library` style targets inside the build and in the generated `find_package()` module.
 - `CDU_RC_TEMPLATE`: The path to the `.rc` file for Windows version information (leave empty to disable).
 - `CDU_DEPLOY_*`: Settings for deployment (additional paths, exclusions, etc.).
 
@@ -87,6 +89,8 @@ Here is an example of what your project structure might look like with CDU:
 - **Windows Automation**: Auto-generation of `version.rc`, manifest, and icon linking.
 - **Precompiled Headers (PCH)**: Automatic creation and linking of PCH to speed up builds.
 - **Dependency Management**: Automatic discovery and copying of runtime dependencies (DLLs, .so) during installation.
+- **Consistent namespace & package export**: All libraries/plugins are reachable as `MyProject::<Target>` without relying on
+  `add_library(... ALIAS ...)` and a ready-to-use package configuration is emitted for external consumers.
 - **Auto-Inclusion of Sub-projects**: `include_projects()` to automatically scan for `CMakeLists.txt` in subdirectories.
 
 ## Examples and Guides

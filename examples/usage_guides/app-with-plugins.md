@@ -37,10 +37,13 @@ file(GLOB_RECURSE ${PROJECT_NAME}_SOURCES "src/*.cpp" "include/*.h")
 
 declare_plugin(${PROJECT_NAME} "formats"
     SOURCES ${${PROJECT_NAME}_SOURCES}
-    ALIAS Formats::PluginA
     PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Xml
 )
 ```
+
+После вызова создаётся удобный таргет `AppWithPlugins::plugin_a`, который можно
+использовать в `PLUGINS` и `target_link_libraries`. Этот же таргет будет
+экспортирован в пакет `find_package(AppWithPlugins CONFIG)` при установке.
 
 **`plugins/format_b/CMakeLists.txt`**
 ```cmake
@@ -54,10 +57,12 @@ file(GLOB_RECURSE ${PROJECT_NAME}_SOURCES "src/*.cpp" "include/*.h")
 # Объявляем плагин с именем 'plugin_b' и той же категорией 'formats'
 declare_plugin(${PROJECT_NAME} "formats"
     SOURCES ${${PROJECT_NAME}_SOURCES}
-    ALIAS Formats::PluginB
     PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Xml
 )
 ```
+
+Аналогично доступен таргет `AppWithPlugins::plugin_b` и он тоже попадёт в
+конфигурацию пакета.
 
 **`plugins/CMakeLists.txt`**
 ```cmake
@@ -77,8 +82,8 @@ file(GLOB_RECURSE ${PROJECT_NAME}_SOURCES "src/*.cpp" "include/*.h")
 declare_application(${PROJECT_NAME}
     SOURCES ${${PROJECT_NAME}_SOURCES}
     PLUGINS # Ключевое слово для указания плагинов
-        Formats::PluginA # Можно так-же указать plugin_a
-        Formats::PluginB # Можно так-же указать plugin_b
+        AppWithPlugins::plugin_a # Можно так-же указать plugin_a
+        AppWithPlugins::plugin_b # Можно так-же указать plugin_b
     PRIVATE Qt${QT_VERSION_MAJOR}::Core
 )
 ```
