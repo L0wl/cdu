@@ -37,7 +37,7 @@ file(GLOB_RECURSE ${PROJECT_NAME}_SOURCES "src/*.cpp" "include/*.h")
 
 declare_plugin(${PROJECT_NAME} "formats"
     SOURCES ${${PROJECT_NAME}_SOURCES}
-    ALIAS Formats::PluginA
+    # Цель автоматически экспортируется как AppWithPlugins::plugin_a
     PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Xml
 )
 ```
@@ -54,7 +54,7 @@ file(GLOB_RECURSE ${PROJECT_NAME}_SOURCES "src/*.cpp" "include/*.h")
 # Объявляем плагин с именем 'plugin_b' и той же категорией 'formats'
 declare_plugin(${PROJECT_NAME} "formats"
     SOURCES ${${PROJECT_NAME}_SOURCES}
-    ALIAS Formats::PluginB
+    # Цель автоматически экспортируется как AppWithPlugins::plugin_b
     PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Xml
 )
 ```
@@ -77,8 +77,8 @@ file(GLOB_RECURSE ${PROJECT_NAME}_SOURCES "src/*.cpp" "include/*.h")
 declare_application(${PROJECT_NAME}
     SOURCES ${${PROJECT_NAME}_SOURCES}
     PLUGINS # Ключевое слово для указания плагинов
-        Formats::PluginA # Можно так-же указать plugin_a
-        Formats::PluginB # Можно так-же указать plugin_b
+        AppWithPlugins::plugin_a # Можно так-же указать plugin_a
+        AppWithPlugins::plugin_b # Можно так-же указать plugin_b
     PRIVATE Qt${QT_VERSION_MAJOR}::Core
 )
 ```

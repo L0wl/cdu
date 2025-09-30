@@ -31,9 +31,49 @@ function(_CDU_get_real_target_name out_var in_name)
         get_target_property(aliased_target ${in_name} ALIASED_TARGET)
         if(aliased_target)
             set(real_name ${aliased_target})
+        else()
+            get_target_property(namespaced_target ${in_name} CDU_REAL_TARGET)
+            if(namespaced_target)
+                set(real_name ${namespaced_target})
+            endif()
         endif()
     endif()
     set(${out_var} ${real_name} PARENT_SCOPE)
+endfunction()
+
+##
+# @brief (Внутренняя) Регистрирует экспортируемую цель с пространством имён проекта.
+#
+# Создаёт глобальную импортированную цель, которую можно использовать
+# по имени `<namespace>::<target_name>` в рамках текущей конфигурации.
+# Пространство имён определяется переменной CDU_TARGET_NAMESPACE.
+#
+# @param target_name Имя существующей цели, которую необходимо экспортировать.
+#
+function(_CDU_register_namespaced_target target_name)
+    if(NOT DEFINED CDU_TARGET_NAMESPACE OR "${CDU_TARGET_NAMESPACE}" STREQUAL "")
+        return()
+    endif()
+
+    set(namespaced_target "${CDU_TARGET_NAMESPACE}::${target_name}")
+    if(TARGET "${namespaced_target}")
+        set_target_properties(${namespaced_target} PROPERTIES CDU_REAL_TARGET ${target_name})
+        set_property(TARGET ${target_name} APPEND PROPERTY CDU_NAMESPACED_TARGETS "${namespaced_target}")
+        return()
+    endif()
+
+    get_target_property(target_type ${target_name} TYPE)
+    if(target_type STREQUAL "EXECUTABLE")
+        add_executable(${namespaced_target} IMPORTED GLOBAL)
+        set_property(TARGET ${namespaced_target} PROPERTY IMPORTED_LOCATION "$<TARGET_FILE:${target_name}>")
+    else()
+        add_library(${namespaced_target} INTERFACE IMPORTED GLOBAL)
+        set_property(TARGET ${namespaced_target} PROPERTY INTERFACE_LINK_LIBRARIES ${target_name})
+    endif()
+
+    set_target_properties(${namespaced_target} PROPERTIES CDU_REAL_TARGET ${target_name})
+    set_property(TARGET ${target_name} APPEND PROPERTY CDU_NAMESPACED_TARGETS "${namespaced_target}")
+    CDU_debug("Registered namespaced target '${namespaced_target}' -> '${target_name}' (wrapper: ${target_type})")
 endfunction()
 
 ##
@@ -148,10 +188,8 @@ function(_CDU_declare_target name)
         CDU_error("Unknown target type '${ARG_TYPE}' for '${name}'.")
     endif()
 
-    # Создание псевдонима (alias) для таргета, если указан
     if(ARG_ALIAS)
-        add_library(${ARG_ALIAS} ALIAS ${name})
-        CDU_debug("Created alias '${ARG_ALIAS}' for target '${name}'.")
+        CDU_warning("ALIAS argument for target '${name}' is deprecated. Use '${CDU_TARGET_NAMESPACE}::${name}' instead.")
     endif()
 
     # --- Общие свойства для всех "сборных" таргетов ---
@@ -261,6 +299,8 @@ function(_CDU_declare_target name)
     list(APPEND CDU_DECLARED_TARGETS ${name})
     set(CDU_DECLARED_TARGETS ${CDU_DECLARED_TARGETS} CACHE INTERNAL "Список всех таргетов, объявленных через CDU")
     CDU_debug("Internal target '${name}' with type '${ARG_TYPE}' successfuly created.")
+
+    _CDU_register_namespaced_target(${name})
 endfunction()
 
 CDU_debug("Module 'CDU_target' is loaded.")

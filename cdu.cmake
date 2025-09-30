@@ -22,6 +22,12 @@ set(CDU_MODULES_DIR "${CDU_BASE_DIR}/modules")
 # Определяем директорию со скриптами
 set(CDU_SCRIPTS_DIR "${CDU_BASE_DIR}/scripts")
 
+# Пространство имён для экспортируемых целей (по умолчанию - имя верхнеуровневого проекта)
+if(NOT DEFINED CDU_TARGET_NAMESPACE OR "${CDU_TARGET_NAMESPACE}" STREQUAL "")
+    set(CDU_TARGET_NAMESPACE "${CMAKE_PROJECT_NAME}")
+endif()
+set(CDU_TARGET_NAMESPACE "${CDU_TARGET_NAMESPACE}" CACHE INTERNAL "Namespace for CDU exported targets")
+
 # ========================================================================================
 # ========================================================================================
 #

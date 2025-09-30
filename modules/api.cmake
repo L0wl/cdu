@@ -24,7 +24,7 @@ set(CDU_API_MODULE_LOADED TRUE)
 #
 # @param name Имя таргета.
 #
-# @arg ALIAS Псевдоним (alias) для таргета.
+# @arg ALIAS (устарело) Псевдоним для таргета. Цель автоматически экспортируется как `<ProjectName>::<Target>`.
 # @arg SOURCES Список исходных файлов.
 # @arg PLUGINS Список плагинов, которые должны быть задеплоены вместе с приложением.
 # @arg COMPILE_DEFINITIONS Список макроопределений компилятора.
@@ -116,7 +116,7 @@ endfunction()
 #
 # @param name Имя таргета пакета.
 #
-# @arg ALIAS Псевдоним (alias) для таргета.
+# @arg ALIAS (устарело) Псевдоним для таргета. Цель автоматически экспортируется как `<ProjectName>::<Target>`.
 # @arg FILES Список файлов, входящих в пакет (пути относительны CMakeLists.txt).
 # @arg DESTINATION Относительный путь внутри директории приложения, куда будут скопированы файлы.
 #
@@ -137,9 +137,10 @@ function(declare_package name)
     endif()
 
     # Создаем INTERFACE таргет
-    add_library(${name}_package INTERFACE)
+    add_library(${name} INTERFACE)
+
     if(ARG_ALIAS)
-        add_library(${ARG_ALIAS} ALIAS ${name}_package)
+        CDU_warning("ALIAS argument for package '${name}' is deprecated. Use '${CDU_TARGET_NAMESPACE}::${name}' instead.")
     endif()
 
     # Преобразуем относительные пути файлов в абсолютные
@@ -152,16 +153,18 @@ function(declare_package name)
         endif()
     endforeach()
 
-    target_sources(${name}_package INTERFACE
+    target_sources(${name} INTERFACE
         ${ARG_FILES}
     )
 
     # Сохраняем информацию в свойствах таргета
-    set_target_properties(${name}_package PROPERTIES
+    set_target_properties(${name} PROPERTIES
         IS_PACKAGE TRUE
         PACKAGE_FILES "${absolute_files}"
         PACKAGE_DESTINATION "${ARG_DESTINATION}"
     )
+
+    _CDU_register_namespaced_target(${name})
 
     CDU_info("Definition of package: ${name}")
 endfunction()
@@ -174,7 +177,7 @@ endfunction()
 # @param name Имя таргета.
 # @param type Тип библиотеки: SHARED, STATIC или INTERFACE.
 #
-# @arg ALIAS Псевдоним (alias) для таргета.
+# @arg ALIAS (устарело) Псевдоним для таргета. Цель автоматически экспортируется как `<ProjectName>::<Target>`.
 # @arg SOURCES Список исходных файлов (не для INTERFACE).
 # @arg INCLUDE_DIRS Публичные директории с заголовочными файлами.
 # @arg COMPILE_FEATURES Требуемые возможности компилятора (например, cxx_std_17).
@@ -219,7 +222,7 @@ endfunction()
 # @param name Имя таргета.
 # @param category Категория плагина (используется для создания поддиректории).
 #
-# @arg ALIAS Псевдоним (alias) для таргета.
+# @arg ALIAS (устарело) Псевдоним для таргета. Цель автоматически экспортируется как `<ProjectName>::<Target>`.
 # @arg SOURCES Список исходных файлов.
 # @arg PUBLIC Список публичных зависимостей.
 # @arg PRIVATE Список приватных зависимостей.

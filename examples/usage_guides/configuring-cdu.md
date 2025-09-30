@@ -39,6 +39,11 @@ set(CDU_DEBUG_MODE ON CACHE BOOL "...")
   # Отключаем внедрение версии
   set(CDU_RC_TEMPLATE "" CACHE STRING "...")
   ```
+- **`CDU_TARGET_NAMESPACE`**: Пространство имён для автоматически экспортируемых целей (`<ProjectName>::Target`). По умолчанию совпадает с именем корневого проекта.
+  ```cmake
+  # Переименовываем пространство имён целей
+  set(CDU_TARGET_NAMESPACE "MyCompany::Toolkit" CACHE INTERNAL "...")
+  ```
 
 ### 3. Настройки развертывания (Deploy)
 

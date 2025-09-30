@@ -51,6 +51,7 @@ You can easily change parameters such as:
 - `CDU_PCH_FILE`: The path to the precompiled header file (leave empty to disable).
 - `CDU_RC_TEMPLATE`: The path to the `.rc` file for Windows version information (leave empty to disable).
 - `CDU_DEPLOY_*`: Settings for deployment (additional paths, exclusions, etc.).
+- `CDU_TARGET_NAMESPACE`: Namespace applied to automatically exported targets (`<namespace>::MyLib`). Defaults to the root project name.
 
 Open `cdu.cmake` to see the full list of options with comments.
 
@@ -84,6 +85,7 @@ Here is an example of what your project structure might look like with CDU:
 ## Key Features
 
 - **Simple Target Declaration**: Functions like `declare_application`, `declare_library`, `declare_plugin`.
+- **Unified Target Namespace**: Each target is automatically exported as `<ProjectName>::Target`, making reuse inside and outside the project straightforward.
 - **Windows Automation**: Auto-generation of `version.rc`, manifest, and icon linking.
 - **Precompiled Headers (PCH)**: Automatic creation and linking of PCH to speed up builds.
 - **Dependency Management**: Automatic discovery and copying of runtime dependencies (DLLs, .so) during installation.
