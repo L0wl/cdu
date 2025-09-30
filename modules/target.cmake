@@ -198,7 +198,7 @@ function(_CDU_declare_target name)
 
         # Добавление публичных include-директорий
         target_include_directories(${name} PUBLIC
-            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+            "${CMAKE_CURRENT_SOURCE_DIR}/include"
             ${ARG_INCLUDE_DIRS}
         )
 
